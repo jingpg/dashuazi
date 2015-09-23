@@ -1,0 +1,34 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+STOP=99
+
+NAME=dashuazi
+DESC="DaShuaZi"
+isRebootFile="/tmp/dashuazi_reboot"
+
+run=true
+
+start() {
+	printf $$ > /var/run/dashuazi_loopup
+	while true; do
+		/bin/dashuazi >> /tmp/dashuazi.log
+		if [ ! -f "$isRebootFile" ]; then 
+			sleep 5
+		else
+			rm /tmp/dashuazi_reboot
+			printf "===reboot====\n" >> /tmp/dashuazi.log
+			return
+		fi 
+	done
+}
+
+stop() {
+	kill `cat /var/run/dashuazi_loopup`
+	rm /var/run/dashuazi_loopup
+}
+
+restart() {
+	stop
+	start
+}
