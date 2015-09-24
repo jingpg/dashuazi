@@ -9,15 +9,14 @@ PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
 include $(INCLUDE_DIR)/package.mk
 
 define Package/dashuazi
-  SECTION:=utils
-  CATEGORY:=Multimedia
-  DEPENDS:=
-  TITLE:=dashuazi
-  MAINTAINER:=jwz <jingpg93@gmail.com>
+    SECTION:=net
+    CATEGORY:=Network
+    TITLE:=dashuazi
+    MAINTAINER:=jwz <jingpg93@gmail.com>
 endef
 
 define Package/dashuazi/description
- dashuazi
+    dashuazi
 endef
 
 define Package/dashuazi/conffiles
