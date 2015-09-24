@@ -8,7 +8,7 @@ PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/ddserver
+define Package/dashuazi
   SECTION:=utils
   CATEGORY:=Multimedia
   DEPENDS:=
@@ -24,7 +24,7 @@ define Package/dashuazi/conffiles
 /etc/dashuazi.cfg
 endef
 
-define Package/ddserver/install
+define Package/dashuazi/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) ./files/dashuazi $(1)/usr/bin/
 	$(INSTALL_DIR) $(1)/etc/init.d
