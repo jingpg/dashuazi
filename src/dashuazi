@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # base info
-ScriptVer=3
+ScriptVer=4
 RouteModel=MERCURY_MAC1200R
 
 # server URL
@@ -306,4 +306,5 @@ Wan_mac=$c_wan_mac\
 	esac
 }
 
+loadCFG
 getCommand
