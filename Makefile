@@ -4,8 +4,6 @@ PKG_NAME:=dashuazi
 PKG_VERSION:=0.1
 PKG_RELEASE:=1
 
-PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
-
 include $(INCLUDE_DIR)/package.mk
 
 define Package/dashuazi
@@ -13,6 +11,11 @@ define Package/dashuazi
     CATEGORY:=Network
     TITLE:=dashuazi
     MAINTAINER:=jwz <jingpg93@gmail.com>
+endef
+
+define Build/Prepare
+        mkdir -p $(PKG_BUILD_DIR)
+        $(CP) ./src/* $(PKG_BUILD_DIR)/
 endef
 
 define Package/dashuazi/description
@@ -25,11 +28,11 @@ endef
 
 define Package/dashuazi/install
 	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) ./files/dashuazi $(1)/usr/bin/
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/dashuazi $(1)/usr/bin/
 	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_BIN) ./files/zc_loopup.init $(1)/etc/init.d/zc_loopup
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/zc_loopup.init $(1)/etc/init.d/zc_loopup
 	$(INSTALL_DIR) $(1)/etc/
-	$(INSTALL_DATA) ./files/dashuazi.cfg $(1)/etc/dashuazi.cfg
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/dashuazi.cfg $(1)/etc/dashuazi.cfg
 endef
 
 $(eval $(call BuildPackage,dashuazi))
