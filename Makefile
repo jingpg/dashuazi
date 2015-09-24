@@ -14,16 +14,19 @@ define Package/dashuazi
 endef
 
 define Build/Prepare
-        mkdir -p $(PKG_BUILD_DIR)
-        $(CP) ./src/* $(PKG_BUILD_DIR)/
+	mkdir -p $(PKG_BUILD_DIR)
+	$(CP) ./src/* $(PKG_BUILD_DIR)/
 endef
 
 define Package/dashuazi/description
-    dashuazi
+	dashuazi
 endef
 
 define Package/dashuazi/conffiles
 /etc/dashuazi.cfg
+endef
+
+define Build/Compile
 endef
 
 define Package/dashuazi/install
