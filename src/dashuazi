@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # base info
-ScriptVer=2
+ScriptVer=3
 RouteModel=MERCURY_MAC1200R
 
 # server URL
@@ -23,15 +23,27 @@ c_wifi_channel_5g=""
 c_br_lan=""
 routeinfo=""
 
-CFG_Proxy_server_ip=`sed '/^Proxy_Server_IP=/!d;s/.*=//' /etc/dashuazi.cfg`
-CFG_Proxy_server_port=`sed '/^Proxy_Server_Port=/!d;s/.*=//' /etc/dashuazi.cfg`
-CFG_Proxy_server_password=`sed '/^Proxy_Server_Password=/!d;s/.*=//' /etc/dashuazi.cfg`
-CFG_Proxy_server_timeout=`sed '/^Proxy_Server_Timeout=/!d;s/.*=//' /etc/dashuazi.cfg`
-CFG_Proxy_server_method=`sed '/^Proxy_Server_Method=/!d;s/.*=//' /etc/dashuazi.cfg`
-CFG_BSSID_5G=`sed '/^BSSID_5G=/!d;s/.*=//' /etc/dashuazi.cfg`
-CFG_SSID_5G=`sed '/^SSID_5G=/!d;s/.*=//' /etc/dashuazi.cfg`
-CFG_WIFI_Channel_5G=`sed '/^WIFI_Channel_5G=/!d;s/.*=//' /etc/dashuazi.cfg`
-CFG_version=`sed '/^CFG_Version=/!d;s/.*=//' /etc/dashuazi.cfg`
+CFG_Proxy_server_ip=""
+CFG_Proxy_server_port=""
+CFG_Proxy_server_password=""
+CFG_Proxy_server_timeout=""
+CFG_Proxy_server_method=""
+CFG_BSSID_5G=""
+CFG_SSID_5G=""
+CFG_WIFI_Channel_5G=""
+CFG_version=""
+
+loadCFG(){
+	CFG_Proxy_server_ip=`sed '/^Proxy_Server_IP=/!d;s/.*=//' /etc/dashuazi.cfg`
+	CFG_Proxy_server_port=`sed '/^Proxy_Server_Port=/!d;s/.*=//' /etc/dashuazi.cfg`
+	CFG_Proxy_server_password=`sed '/^Proxy_Server_Password=/!d;s/.*=//' /etc/dashuazi.cfg`
+	CFG_Proxy_server_timeout=`sed '/^Proxy_Server_Timeout=/!d;s/.*=//' /etc/dashuazi.cfg`
+	CFG_Proxy_server_method=`sed '/^Proxy_Server_Method=/!d;s/.*=//' /etc/dashuazi.cfg`
+	CFG_BSSID_5G=`sed '/^BSSID_5G=/!d;s/.*=//' /etc/dashuazi.cfg`
+	CFG_SSID_5G=`sed '/^SSID_5G=/!d;s/.*=//' /etc/dashuazi.cfg`
+	CFG_WIFI_Channel_5G=`sed '/^WIFI_Channel_5G=/!d;s/.*=//' /etc/dashuazi.cfg`
+	CFG_version=`sed '/^CFG_Version=/!d;s/.*=//' /etc/dashuazi.cfg`
+}
 
 ProxyIsReadly=false
 
@@ -100,7 +112,6 @@ writeToConfig(){
 # set wifi
 setWifi(){
 	# write new bssid
-	CFG_BSSID_5G=`sed '/^BSSID_5G=/!d;s/.*=//' /etc/dashuazi.cfg`
 	echo ${CFG_BSSID_5G} > /etc/macaddr_5g
 	sleep 1
 
@@ -262,18 +273,21 @@ Wan_mac=$c_wan_mac\
 		resetRoute )
 			echo "Reset route"
 			writeToConfig
+			loadCFG
 			setWifi
 			setReboot
 			;;
 		resetSS )
 			echo "Reset Shodwsocks"
 			writeToConfig
+			loadCFG
 			stopSS
 			startss
 			;;
 		resetWifi )
 			echo "Reset Wifi"
 			writeToConfig
+			loadCFG
 			setWifi
 			setReboot
 			;;
