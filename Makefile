@@ -31,7 +31,7 @@ endef
 
 define Package/dashuazi/install
 	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/dashuazi $(1)/usr/bin/
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/dashuazi $(1)/bin/
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/zc_loopup.init $(1)/etc/init.d/zc_loopup
 	$(INSTALL_DIR) $(1)/etc/
