@@ -1,18 +1,17 @@
 #!/bin/sh
 
 # base info
-ScriptVer=20
-RouteModel=Xiaomi_MiWiFi_Mini
+ScriptVer=4
+RouteModel=MERCURY_MAC1200R
 
 # server URL
-GetPublicIPURL="http://jfq2.51remai.cn/api/router/getip"
-GetCommandURL="http://jfq2.51remai.cn/api/router/getssid"
-GetNewScriptURL="http://jfq2.51remai.cn/api/router/scriptUpdate"
+GetPublicIPURL="http://dashuazi.51remai.cn/api/router/getip"
+GetCommandURL="http://dashuazi.51remai.cn/api/router/getssid"
+GetNewScriptURL="http://dashuazi.51remai.cn/api/router/scriptUpdate"
 
 # pid file
 ss_redir_PID_FILE="/var/run/ss-redir.pid"
 ss_local_PID_FILE="/var/run/ss-local.pid"
-apple_ss_redir_PID_FILE="/var/run/apple-ss-redir.pid"
 
 # 
 c_wan_mac=""
@@ -24,7 +23,6 @@ c_wifi_channel_5g=""
 c_br_lan=""
 routeinfo=""
 
-#
 CFG_Proxy_server_ip=""
 CFG_Proxy_server_port=""
 CFG_Proxy_server_password=""
@@ -52,18 +50,18 @@ ProxyIsReadly=false
 # 获取当前状态
 getInfo(){
 	# get eth0 mac
-	c_wan_mac=`ifconfig eth0.1| grep HWaddr | awk -F" " '{print $5}'`
+	c_wan_mac=`ifconfig eth1| grep HWaddr | awk -F" " '{print $5}'`
 
 	# get eth0 ip (wan)
-	c_wan_ip=`ifconfig eth0.2 | grep "inet addr"| awk -F: '{print $2}' | awk '{print $1}'`
+	c_wan_ip=`ifconfig eth1 | grep "inet addr"| awk -F: '{print $2}' | awk '{print $1}'`
 
 	c_br_lan=`ifconfig br-lan | grep "inet addr"| awk -F: '{print $2}' | awk '{print $1}'`
 	# get wifi info
 	c_ssid=`uci get wireless.@wifi-iface[0].ssid`
 
-	c_bssid=`ifconfig rai0| grep HWaddr | awk -F" " '{print $5}'`	
+	c_bssid=`ifconfig wlan0| grep HWaddr | awk -F" " '{print $5}'`	
 
-	c_wifi_channel_5g=`uci get wireless.mt7610e.channel`	
+	c_wifi_channel_5g=`uci get wireless.radio0.channel`	
 
 	#check network is OK
 	echo "Starting check network"
@@ -76,7 +74,7 @@ getInfo(){
 	echo "Network is ok"
 
 	echo "Starting check proxy server"
-	c_public_ip=$(curl --socks5 "${c_br_lan}:5356" "$GetPublicIPURL" -s -m 5 --retry-delay 1 --retry 5)
+	c_public_ip=$(curl --socks5 "${c_br_lan}:5356" "$GetPublicIPURL" -s -m 3)
 	if [ "$c_public_ip" == "$CFG_Proxy_server_ip" ] 
 	then
 		# proxy is ok
@@ -84,18 +82,12 @@ getInfo(){
 		echo "Proxy server is ok"
 	else
 		# proxy error,try startss
-		stopSS
-		stopIptable
 		startSS
 		startIptable
 		# sleep 3
-		for loop in 0 1 2; 
+		for loop in 0 1 2 3 4 5 6 7 8 9; 
 		do
-			c_public_ip=$(curl --socks5 "${c_br_lan}:5356" "$GetPublicIPURL" -s -m 3 --retry-delay 1 --retry 3)
-			#echo "====================="
-			#echo $c_public_ip
-			#echo $CFG_Proxy_server_ip
-			#echo "====================="
+			c_public_ip=$(curl --socks5 "${c_br_lan}:5356" "$GetPublicIPURL" -s -m 3)
 			if [ $c_public_ip == $CFG_Proxy_server_ip ]
 				then
 				# proxy is ok
@@ -106,15 +98,14 @@ getInfo(){
 			sleep 1
 		done
 		echo "Proxy server is down"
-		# stopIptable
-		# stopSS
-		c_public_ip=$(curl "$GetPublicIPURL" -s -m 3 --retry-delay 1 --retry 3)
+		stopIptable
+		stopSS
+		c_public_ip=$(curl "$GetPublicIPURL" -s -m 3)
 	fi
 }
 
 # write to config file
 writeToConfig(){
-	echo "writeToConfig"
 	printf "$routeinfo" > /etc/dashuazi.cfg
 }
 
@@ -122,14 +113,14 @@ writeToConfig(){
 setWifi(){
 	# write new bssid
 	echo ${CFG_BSSID_5G} > /etc/macaddr_5g
-	config_5g
+	sleep 1
+
 	#set new ssid
 	uci set wireless.@wifi-iface[0].ssid=$CFG_SSID_5G
-	#set new wifi channel
-	uci set wireless.mt7610e.channel=$CFG_WIFI_Channel_5G
-	#set wifi hidden 
-	uci set wireless.@wifi-iface[0].hidden=1
+	sleep 1
 
+	#set new wifi channel
+	uci set wireless.radio0.channel=$CFG_WIFI_Channel_5G
 	sleep 1
 
 	uci commit
@@ -139,30 +130,9 @@ setWifi(){
 	/etc/init.d/network restart
 }; 
 
-#setRepairWifi
-setRepairWifi(){
-	#set new wifi channel
-	uci set wireless.mt7610e.channel=$CFG_WIFI_Channel_5G
-	uci commit
-	sleep 1
-	/sbin/wifi
-}; 
-
-checkDNS(){
-	if grep -Fxq "23.218.28.29 init.itunes.apple.com" /etc/hosts
-	then
-  		echo "dns [init.itunes.apple.com] found"
-  		echo "127.0.0.1 localhost" > /etc/hosts
-  		/etc/init.d/dnsmasq restart
-	else
-  		echo "dns [init.itunes.apple.com] added"
-	fi
-}
-
-
 # start ss
 startSS(){
-	echo "Starting Shadowsocks:$CFG_Proxy_server_ip"
+	echo "Starting Shadowsocks"
 	ulimit -n 4096
 
 	/usr/bin/ss-redir \
@@ -185,26 +155,23 @@ startSS(){
 		-b $c_br_lan \
 		-f $ss_local_PID_FILE
 
-	# echo "Started PID: `cat ${ss_redir_PID_FILE}`"
-	# echo "Started PID: `cat ${ss_local_PID_FILE}`"
+	echo "Started PID: `cat $ss_redir_PID_FILE`"
 }
 
 stopSS(){
 	echo "Stoping shadowsocks client"
-	# echo `cat ${ss_redir_PID_FILE}`
-	# echo `cat ${ss_local_PID_FILE}`
 	kill `cat $ss_redir_PID_FILE`
 	kill `cat $ss_local_PID_FILE`
-
 	rm "$ss_redir_PID_FILE"
 	rm "$ss_local_PID_FILE"
 }
 
 # start iptables
 startIptable(){
+	# remoteip="`resolveip -t5 $Server_URL`"
 	iptables -t nat -N SHADOWSOCKS
-	
-	# return
+	iptables -t nat -A SHADOWSOCKS -p tcp -d 118.184.176.13 -j REDIRECT --to-ports 5355
+
 	iptables -t nat -A SHADOWSOCKS -d 0.0.0.0/8 -j RETURN
 	iptables -t nat -A SHADOWSOCKS -d 10.0.0.0/8 -j RETURN
 	iptables -t nat -A SHADOWSOCKS -d 127.0.0.0/8 -j RETURN
@@ -213,28 +180,10 @@ startIptable(){
 	iptables -t nat -A SHADOWSOCKS -d 192.168.0.0/16 -j RETURN
 	iptables -t nat -A SHADOWSOCKS -d 224.0.0.0/4 -j RETURN
 	iptables -t nat -A SHADOWSOCKS -d 240.0.0.0/4 -j RETURN
-
-	#down.51remai.cn
-	iptables -t nat -A SHADOWSOCKS -d 113.31.129.6 -p tcp -j RETURN	
-
-	# apple
-	iptables -t nat -A SHADOWSOCKS -d 23.0.0.0/8 -p tcp -j RETURN
-	iptables -t nat -A SHADOWSOCKS -d 23.192.0.0/11 -p tcp -j RETURN
-	iptables -t nat -A SHADOWSOCKS -d 23.32.0.0/11 -p tcp -j RETURN
-	iptables -t nat -A SHADOWSOCKS -d 23.64.0.0/14 -p tcp -j RETURN
-
-	iptables -t nat -A SHADOWSOCKS -d 123.150.54.7 -p tcp -j RETURN
-	iptables -t nat -A SHADOWSOCKS -d 17.0.0.0/8 -p tcp -j RETURN
-	iptables -t nat -A SHADOWSOCKS -d 111.202.7.215 -p tcp -j RETURN
-	iptables -t nat -A SHADOWSOCKS -d 202.110.80.5 -p tcp -j RETURN
-	iptables -t nat -A SHADOWSOCKS -d 211.90.28.31 -p tcp -j RETURN
-	iptables -t nat -A SHADOWSOCKS -d 125.39.78.154 -p tcp -j RETURN
-	iptables -t nat -A SHADOWSOCKS -d 125.39.78.24 -p tcp -j RETURN
-	iptables -t nat -A SHADOWSOCKS -d 202.110.80.6 -p tcp -j RETURN
-	iptables -t nat -A SHADOWSOCKS -d 211.90.30.80 -p tcp -j RETURN
+	iptables -t nat -A SHADOWSOCKS -d $CFG_Proxy_server_ip -j RETURN
 
 	iptables -t nat -A SHADOWSOCKS -p tcp -j REDIRECT --to-ports 5355
-	iptables -t nat -A SHADOWSOCKS -p icmp -j REDIRECT --to-ports 5355
+	iptables -t nat -A SHADOWSOCKS -p udp -j REDIRECT --to-ports 5355
 	iptables -t nat -I zone_lan_prerouting -j SHADOWSOCKS
 
 	# iptables -t nat --list 
@@ -258,6 +207,7 @@ setReboot(){
 getCommand(){
 	getInfo
 	echo "Get route info,and update command"
+	echo "================================="
 	if $ProxyIsReadly; then
 		echo "use proxy"
 		routeinfo=$(curl --socks5 "${c_br_lan}:5356" -d "\
@@ -297,23 +247,23 @@ Wan_mac=$c_wan_mac\
 &ProxyIsReadly=$ProxyIsReadly"\
  "$GetCommandURL" -s -m 3)
 	fi	
-	# echo "routeinfo=$routeinfo"
-	# echo "===================="
-	# echo "Wan_mac=$c_wan_mac"
-	# echo "&Wan_ip=$c_wan_ip"
-	# echo "&Current_public_IP=$c_public_ip"
-	# echo "&SSID_5G=$c_ssid"
-	# echo "&BSSID_5G=$c_bssid"
-	# echo "&WIFI_Channel_5G=$c_wifi_channel_5g"
-	# echo "&Proxy_Server_IP=$CFG_Proxy_server_ip"
-	# echo "&Proxy_Server_Port=$CFG_Proxy_server_port"
-	# echo "&Proxy_Server_Password=$CFG_Proxy_server_password"
-	# echo "&Proxy_Server_Timeout=$CFG_Proxy_server_timeout"
-	# echo "&Proxy_Server_Method=$CFG_Proxy_server_method"
-	# echo "&Script_Ver=$ScriptVer"
-	# echo "&Route_Model=$RouteModel"
-	# echo "&CFG_Version=$CFG_version"
-	# echo "&ProxyIsReadly=$ProxyIsReadly"
+	echo "routeinfo=$routeinfo"
+	echo "===================="
+	echo "Wan_mac=$c_wan_mac"
+	echo "&Wan_ip=$c_wan_ip"
+	echo "&Current_public_IP=$c_public_ip"
+	echo "&SSID_5G=$c_ssid"
+	echo "&BSSID_5G=$c_bssid"
+	echo "&WIFI_Channel_5G=$c_wifi_channel_5g"
+	echo "&Proxy_Server_IP=$CFG_Proxy_server_ip"
+	echo "&Proxy_Server_Port=$CFG_Proxy_server_port"
+	echo "&Proxy_Server_Password=$CFG_Proxy_server_password"
+	echo "&Proxy_Server_Timeout=$CFG_Proxy_server_timeout"
+	echo "&Proxy_Server_Method=$CFG_Proxy_server_method"
+	echo "&Script_Ver=$ScriptVer"
+	echo "&Route_Model=$RouteModel"
+	echo "&CFG_Version=$CFG_version"
+	echo "&ProxyIsReadly=$ProxyIsReadly"
 	# routeinfo=$(curl --socks5 192.168.12.1:5356 "$GetCommandURL" -s -m 3)
 	command=`echo ${routeinfo:8} |awk '{print $1}'`
 	case $command in
@@ -341,12 +291,6 @@ Wan_mac=$c_wan_mac\
 			setWifi
 			setReboot
 			;;
-		repairWifi )
-			echo "Repair Wifi"
-			writeToConfig
-			loadCFG
-			setRepairWifi
-			;;
 		reboot )
 			echo "Reboot Route"
 			writeToConfig
@@ -354,7 +298,7 @@ Wan_mac=$c_wan_mac\
 			;;
 		updateScript )
 			echo "Update Script"
-			curl -o "/bin/dashuazi" -d "Script_Ver=$ScriptVer&Route_Model=$RouteModel" "$GetNewScriptURL" -s -m 5 --retry-delay 1 --retry 5
+			curl -o "/bin/dashuazi" -d "Script_Ver=$ScriptVer&Route_Model=$RouteModel" "$GetNewScriptURL" -s 
 			chmod +x /bin/dashuazi
 			writeToConfig
 			setReboot
@@ -363,5 +307,4 @@ Wan_mac=$c_wan_mac\
 }
 
 loadCFG
-checkDNS
 getCommand
